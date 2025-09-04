@@ -1,0 +1,91 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ENUMERATIONS
+enum Role {
+  PATIENT
+  ADMIN
+  DOCTOR
+}
+
+enum AppointmentStatus {
+  REQUESTED
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+// MODELS
+
+model Practice {
+  id               String        @id @default(cuid())
+  name             String
+  subdomain        String        @unique
+  subscriptionTier String        @default("free")
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  users            User[]
+  appointments     Appointment[]
+}
+
+model User {
+  id             String           @id @default(cuid())
+  email          String           @unique
+  passwordHash   String
+  role           Role
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  practiceId     String
+  practice       Practice         @relation(fields: [practiceId], references: [id], onDelete: Cascade)
+  patientProfile PatientProfile?
+  doctorProfile  DoctorProfile?
+  appointmentsAsPatient Appointment[] @relation("PatientAppointments")
+  appointmentsAsDoctor  Appointment[] @relation("DoctorAppointments")
+}
+
+model PatientProfile {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName          String?
+  dateOfBirth       DateTime?
+  gender            String?
+  contactNumber     String?
+  address           String?
+  insuranceProvider String?
+  policyNumber      String?
+}
+
+model DoctorProfile {
+  id        String @id @default(cuid())
+  userId    String @unique
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName  String
+  specialty String?
+}
+
+model Appointment {
+  id         String            @id @default(cuid())
+  startTime  DateTime
+  endTime    DateTime
+  status     AppointmentStatus @default(REQUESTED)
+  notes      String?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  practiceId String
+  practice   Practice          @relation(fields: [practiceId], references: [id], onDelete: Cascade)
+  patientId  String
+  patient    User              @relation("PatientAppointments", fields: [patientId], references: [id], onDelete: Cascade)
+  doctorId   String
+  doctor     User              @relation("DoctorAppointments", fields: [doctorId], references: [id], onDelete: Cascade)
+}
+
